@@ -85,7 +85,7 @@ class Uploader:
         self.filename = prompt(
             message = "Enter the path of the file to upload", 
             errormessage= "The file path you provided does not exist",
-            isvalid = lambda v : os.path.isfile(v)
+            isvalid = os.path.isfile
         )
 
         self.dataset_name = prompt(
@@ -146,7 +146,10 @@ class Uploader:
         """
         # run a SOLR search for the package
         # http://data2.vta.org/api/3/action/package_search?q=&fq=title:ins_sample%20AND%20organization:city-of-san-jose
-        solr_query = 'title:{0} AND organization:{1}'.format(dataset_title, owner_org)
+        solr_query = 'title:{0} AND organization:{1}'.format(
+            dataset_title,
+            owner_org,
+        )
         res = self.ckan_inst.action.package_search(q=solr_query)
         if res.get('count') is not 1:
             self.logger.info(
@@ -305,14 +308,15 @@ def shapefile_to_geojson(infile, tempdir=None):
         filename = os.path.splitext(os.path.basename(infile))[0]
         outfilepath = os.path.join(tempdir, filename)
         features = [feature for feature in shapefile]
-        crs = " ".join("+%s=%s" % (k,v) for k,v in shapefile.crs.items())
+        crs = " ".join("+%s=%s" % (k, v) for k, v in shapefile.crs.items())
 
         outfile_layer = {
-        "type": "FeatureCollection",
-        "features": features,
-        "crs": {
-            "type": "link",
-            "properties": {"href": "my_layer.crs", "type": "proj4"} }
+            "type": "FeatureCollection",
+            "features": features,
+            "crs": {
+                "type": "link",
+                "properties": {"href": "my_layer.crs", "type": "proj4"}
+            }
         }
 
         with open("{}.json".format(outfilepath), "w") as f:
@@ -327,31 +331,49 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Upload files to CKAN')
     subparsers = parser.add_subparsers(description='available subcommands')
 
-    parser_main = subparsers.add_parser('direct', help='provide input as positional arguments')
-    parser_main.add_argument('url', metavar='url', type=url_exists, help='the full URL of the CKAN server')
-    parser_main.add_argument('key', metavar='key', type=valid_api_key,
-                             help=('the API key to use for interacting with the API '
-                                   '(this key can be found in your user profile in CKAN)'))
-    parser_main.add_argument('name', metavar='name', type=str, help='the name of the dataset you want to create')
-    parser_main.add_argument('title', metavar='title', type=str, help='Title to display for the dataset')
-    parser_main.add_argument('filename', metavar='filename', type=str, help='the path of the file to upload')
-    parser_main.add_argument('--shapefile', action='store_true', default=False,
-                             help='Is file a shapefile that needs geoJSON conversion')
-    
-    parser_interactive = subparsers.add_parser('interactive', help='enter interactive mode to be prompted for input')
-    
+    parser_main = subparsers.add_parser(
+        'direct', help='provide input as positional arguments'
+    )
+    parser_main.add_argument(
+        'url', metavar='url', type=url_exists,
+        help='the full URL of the CKAN server'
+    )
+    parser_main.add_argument(
+        'key', metavar='key', type=valid_api_key,
+        help=('the API key to use for interacting with the API '
+              '(this key can be found in your user profile in CKAN)')
+    )
+    parser_main.add_argument(
+        'name', metavar='name', type=str,
+        help='the name of the dataset you want to create'
+    )
+    parser_main.add_argument(
+        'title', metavar='title', type=str,
+        help='Title to display for the dataset'
+    )
+    parser_main.add_argument(
+        'filename', metavar='filename', type=str,
+        help='the path of the file to upload'
+    )
+    parser_main.add_argument(
+        '--shapefile', action='store_true', default=False,
+        help='Is file a shapefile that needs geoJSON conversion'
+    )
+
+    parser_interactive = subparsers.add_parser(
+        'interactive',
+        help='enter interactive mode to be prompted for input'
+    )
+
     args = parser.parse_args()
 
-    ckan_util = CkanUtil(ckan_server=args.url,
-                         api_key=args.key)
-    ckan_util.fileUpload(dataset_name=args.name,
-                         dataset_title=args.title,
-                         filepath=args.filename)
+    # ckan_util = CkanUtil(ckan_server=args.url,
+    #                      api_key=args.key)
+    # ckan_util.fileUpload(dataset_name=args.name,
+    #                      dataset_title=args.title,
+    #                      filepath=args.filename)
 
-    # u = Uploader()
-    # u.prompt_args()
-    # print u.to_string()
-    # u.upload()
-
-
-
+    u = Uploader()
+    u.prompt_args()
+    print(u.to_string())
+    u.upload()
