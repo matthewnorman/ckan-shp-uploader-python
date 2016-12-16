@@ -257,23 +257,6 @@ class Uploader:
         )
 
 
-def url_exists(url):
-    parsed_url = urlparse(url)
-    if not bool(parsed_url.scheme):
-        argparse.ArgumentTypeError("{0} is not a valid URL".format(url))
-    try:
-        urllib.request.urlopen(url)
-        return url         # URL Exist
-    except ValueError:
-        # URL not well formatted
-        raise argparse.ArgumentTypeError("{0}  is not a valid URL".format(url))
-    except URLError:
-        # URL don't seem to be alive
-        raise argparse.ArgumentTypeError(
-            "could not connect to the server at {0}".format(url)
-        )
-
-
 def valid_api_key(arg):
     if API_KEY_IS_VALID.search(arg):
         return arg
