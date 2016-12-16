@@ -30,6 +30,17 @@ def test_check_preview_file():
         upload.check_preview_file(filename=filename)
 
 
+def test_to_string():
+
+    uploader = upload.Uploader()
+    uploader.server_url = 'server'
+    uploader.api_key = 'api'
+    uploader.dataset_name = 'dataset'
+    uploader.filename = 'filename'
+
+    assert uploader.to_string() == 'server api dataset filename'
+
+
 def test_url_exists():
     """
     We're just mocking everything to make sure that the code

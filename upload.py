@@ -23,6 +23,7 @@ import sys
 import time
 import threading
 import itertools
+import logging
 
 from urllib.parse import urlparse
 from urllib.error import URLError
@@ -54,12 +55,14 @@ def run_long_process(function_name, *args, **kwargs):
 
 class Uploader:
 
-    def __init__(self):
+    def __init__(self, logger=None):
         self.server_url = None
         self.api_key = None
         self.dataset_name = None
         self.filename = None
         self.ckan_inst = None
+
+        self.logger = logger or logging.getLogger()
 
     def prompt_args(self):
         
@@ -103,10 +106,9 @@ class Uploader:
         try:
             self.ckan_inst.action.package_delete(id=dataset_id)
         except ckanapi.ValidationError as ex:
-            print(ex)
+            self.logger.exception(ex)
         except ckanapi.NotAuthorized as ex:
-            print('access denied. Is your API key valid?')
-            print(repr(ex))
+            self.logger.exception('Access denied. Is your API key valid?')
             raise
 
     def ckan_purge_dataset(self, dataset_id):
@@ -117,10 +119,11 @@ class Uploader:
         try:
             self.ckan_inst.call_action('dataset_purge', {'id': dataset_id})
         except ckanapi.ValidationError as ex:
-            print(ex)
+            self.logger.exception('ValidationError')
         except ckanapi.NotAuthorized as ex:
-            print('access denied. Is your API key valid?')
-            print(repr(ex))
+            self.logger.exception(
+                'Access denied. Is your API key valid?'
+            )
             raise
 
     def ckan_update_resource(
@@ -138,29 +141,33 @@ class Uploader:
         solr_query = 'title:{0} AND organization:{1}'.format(dataset_title, owner_org)
         res = self.ckan_inst.action.package_search(q=solr_query)
         if res.get('count') is not 1:
-            print('could not find the requested dataset; '
-                  'dataset title and organization not specific enough')
+            self.logger.info(
+                'Could not find the requested dataset; '
+                'dataset title and organization not specific enough'
+            )
             return
 
         # would something like this work instead?
         # res = self.ckan_inst.action.package_show(id=dataset_title)
 
-        print('looking for file "{0}" inside the "{1}" dataset'.format(
-            name, dataset_title
-        ))
+        self.logger.info(
+            'looking for file "{0}" inside the "{1}" dataset'.format(
+                name, dataset_title
+            )
+        )
         resource_id = None
         for r in res.get('results')[0].get('resources'):
-            print (str(r.get('name'))+' : '+str(r.get('id')))
+            self.logger.info(str(r.get('name'))+' : '+str(r.get('id')))
             if str(r.get('name')) == str(name):
                 resource_id = r.get('id')
 
         if resource_id is None:
-            print('could not find the requested resource')
+            self.logger.info('Could not find the requested resource.')
             return
         else:
-            print('found resource id "{0}"'.format(resource_id))
+            self.logger.info('Found resource id "{0}"'.format(resource_id))
 
-        print('uploading...')
+        self.logger.info('Uploading...')
         try:
             res = self.ckan_inst.action.resource_update(
                 id=resource_id,
@@ -168,15 +175,14 @@ class Uploader:
                 upload=open(filepath, 'rb'),
                 url=url,
                 format=data_format)
-            print('done')
+            self.logger.info('Done')
             return res
         except ckanapi.ValidationError as ex:
-            print(ex)
+            self.logger.exception('Validation error during upload')
         except ckanapi.NotAuthorized as ex:
-            print('access denied. Is your API key valid?')
-            print(ex)
+            self.logger.exception('access denied. Is your API key valid?')
             raise
-        print('done')
+        self.logger.info('Done')
 
     def ckan_add_resource_to_dataset(
             self, package_id, filepath, name=None,
@@ -185,25 +191,28 @@ class Uploader:
         """
         Upload a new resource and associate it with a dataset
         """
-        print('adding resource to dataset --> '+package_id+' :: '+filepath)
+        self.logger.info(
+            'Adding resource to dataset --> {} :: {}'.format(
+                package_id,filepath
+            )
+        )
         name = name or os.path.basename(filepath)
         try:
-            print('uploading...')
+            self.logger.info('Uploading...')
             res = self.ckan_inst.action.resource_create(
                 package_id=package_id,
                 name=name,
                 upload=open(filepath, 'rb'),
                 url=url,
                 format=data_format)
-            print('done')
+            self.logger.info('Done')
             return res
         except ckanapi.ValidationError as ex:
-            print(ex)
+            self.logger.exception('Validation error in Uploading resource')
         except ckanapi.NotAuthorized as ex:
-            print('access denied. Is your API key valid?')
-            print(ex)
+            self.logger.exception('access denied. Is your API key valid?')
             return
-        print('done')
+        self.logger.info('done')
 
     def ckan_create_dataset(
             self, dataset_name,
@@ -220,17 +229,21 @@ class Uploader:
             )
         except ckanapi.ValidationError as ex:
             if ex.error_dict.get('name') ==  ['That URL is already in use.']:
-                print('Package already exists')
+                self.logger.error('Package already exists')
             else:
                 raise
         except ckanapi.NotAuthorized as ex:
-            print('access denied. Is your API key valid?')
-            print(ex)
+            self.logger.exception('Access denied. Is your API key valid?')
             return
-        print('done')
+        self.logger.info('Done')
 
     def to_string(self):
-        return self.server_url +' '+ self.api_key +' '+ self.dataset_name +' '+ self.filename
+        return '{} {} {} {}'.format(
+            self.server_url,
+            self.api_key,
+            self.dataset_name,
+            self.filename
+        )
 
 
 def url_exists(url):
