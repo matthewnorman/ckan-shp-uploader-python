@@ -34,19 +34,16 @@ def run_long_process(function_name, *args, **kwargs):
     t1 = threading.Thread(target=function_name, args=args, kwargs=kwargs)
     start_t = time.time()
     t1.start()
-    spinner = ['-', '\\', '|', '/', '-', '\\', '|', '/']
-    spinner_i = 0
+    spinner = itertools.cycle(['-', '\\', '|', '/', ])
     delta_t = 0
     while t1.is_alive():
         delta_t = (time.time() - start_t)
         sys.stdout.write(
             "running... time elapsed: {0:.1f}s  {1}   \r".format(
-                delta_t, spinner[spinner_i]
+                delta_t, next(spinner)
             )
         )
-        spinner_i = (spinner_i + 1) % len(spinner)
         time.sleep(0.1)
-        delta_t = (time.time() - start_t)
         sys.stdout.flush()
 
     print('Done!                           ')
