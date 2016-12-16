@@ -55,36 +55,44 @@ def run_long_process(function_name, *args, **kwargs):
 
 class Uploader:
 
-    def __init__(self, logger=None):
+    def __init__(self, server_url=None, api_key=None,
+                 filename=None, dataset_name=None, logger=None):
         self.server_url = None
         self.api_key = None
         self.dataset_name = None
         self.filename = None
         self.ckan_inst = None
 
+        # Grab a default logger if no longer available
         self.logger = logger or logging.getLogger()
 
     def prompt_args(self):
         
         self.server_url = prompt(
             message = "Enter the URL of the CKAN server", 
-            errormessage= "The URL you provides is not valid (it must be the full URL)",
-            isvalid = lambda v: url_exists(v))
+            errormessage= ("The URL you provides is not valid (it must "
+                           "be the full URL)"),
+            isvalid = url_exists
+        )
 
         self.api_key = prompt(
             message = "Enter the API key to use for uploading", 
-            errormessage= "A valid API key must be provided. This key can be found in your user profile in CKAN",
-            isvalid = lambda v : API_KEY_IS_VALID.search(v))
+            errormessage= ("A valid API key must be provided. This "
+                           "key can be found in your user profile in CKAN"),
+            isvalid = API_KEY_IS_VALID.search
+        )
 
         self.filename = prompt(
             message = "Enter the path of the file to upload", 
             errormessage= "The file path you provided does not exist",
-            isvalid = lambda v : os.path.isfile(v))
+            isvalid = lambda v : os.path.isfile(v)
+        )
 
         self.dataset_name = prompt(
             message = "Enter the name of the dataset you want to create", 
             errormessage= "The dataset must be named",
-            isvalid = lambda v : len(v) > 0)
+            isvalid = lambda v : len(v) > 0
+        )
 
     def upload(self):
         self.ckan_inst = ckanapi.RemoteCKAN(
