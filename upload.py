@@ -356,7 +356,11 @@ if __name__ == '__main__':
     #                      dataset_title=args.title,
     #                      filepath=args.filename)
 
-    u = Uploader()
-    u.prompt_args()
+    u = Uploader(
+        server_url=args.url,
+        api_key=args.key,
+        filename=args.filename,
+        dataset_name=args.name,
+    )
     print(u.to_string())
     u.upload()
