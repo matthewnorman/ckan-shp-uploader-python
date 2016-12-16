@@ -5,17 +5,16 @@
 # # We'll use the package_create function to create a new dataset.
 # request = urllib2.Request(
 #     'http://www.my_ckan_site.com/api/action/package_create')
-# 
+#
 # # Creating a dataset requires an authorization header.
 # # Replace *** with your API key, from your user account on the CKAN site
 # # that you're creating the dataset on.
 # request.add_header('Authorization', 'a059851e-dea1-4638-aeb4-1c4a7d789fa5')
-# 
+#
 
 
 import argparse
 import os.path
-import urllib.request
 import re
 import json
 import fiona
@@ -25,30 +24,31 @@ import threading
 import itertools
 import logging
 
-from urllib.parse import urlparse
-from urllib.error import URLError
+import ckanapi
 from cli_utils import url_exists, prompt
 
 API_KEY_IS_VALID = re.compile(r"(([^-])+-){4}[^-]+")
-
-import ckanapi
 
 
 def run_long_process(function_name, *args, **kwargs):
     t1 = threading.Thread(target=function_name, args=args, kwargs=kwargs)
     start_t = time.time()
     t1.start()
-    spinner = ['-','\\','|','/','-','\\','|','/']
+    spinner = ['-', '\\', '|', '/', '-', '\\', '|', '/']
     spinner_i = 0
     delta_t = 0
     while t1.is_alive():
         delta_t = (time.time() - start_t)
-        sys.stdout.write("running... time elapsed: {0:.1f}s  {1}   \r".format(delta_t, spinner[spinner_i]))
+        sys.stdout.write(
+            "running... time elapsed: {0:.1f}s  {1}   \r".format(
+                delta_t, spinner[spinner_i]
+            )
+        )
         spinner_i = (spinner_i + 1) % len(spinner)
         time.sleep(0.1)
         delta_t = (time.time() - start_t)
         sys.stdout.flush()
-        
+
     print('Done!                           ')
     print('Finished in {0:.2f} seconds'.format(delta_t))
 
@@ -67,31 +67,31 @@ class Uploader:
         self.logger = logger or logging.getLogger()
 
     def prompt_args(self):
-        
+
         self.server_url = prompt(
-            message = "Enter the URL of the CKAN server", 
-            errormessage= ("The URL you provides is not valid (it must "
-                           "be the full URL)"),
-            isvalid = url_exists
+            message="Enter the URL of the CKAN server",
+            errormessage=("The URL you provides is not valid (it must "
+                          "be the full URL)"),
+            isvalid=url_exists
         )
 
         self.api_key = prompt(
-            message = "Enter the API key to use for uploading", 
-            errormessage= ("A valid API key must be provided. This "
-                           "key can be found in your user profile in CKAN"),
-            isvalid = API_KEY_IS_VALID.search
+            message="Enter the API key to use for uploading",
+            errormessage=("A valid API key must be provided. This "
+                          "key can be found in your user profile in CKAN"),
+            isvalid=API_KEY_IS_VALID.search
         )
 
         self.filename = prompt(
-            message = "Enter the path of the file to upload", 
-            errormessage= "The file path you provided does not exist",
-            isvalid = os.path.isfile
+            message="Enter the path of the file to upload",
+            errormessage="The file path you provided does not exist",
+            isvalid=os.path.isfile
         )
 
         self.dataset_name = prompt(
-            message = "Enter the name of the dataset you want to create", 
-            errormessage= "The dataset must be named",
-            isvalid = lambda v : len(v) > 0
+            message="Enter the name of the dataset you want to create",
+            errormessage="The dataset must be named",
+            isvalid=lambda v: len(v) > 0
         )
 
     def upload(self):
@@ -139,8 +139,10 @@ class Uploader:
         name=None, url='dummy-value', data_format='csv'
     ):
         """
-        For this to work, the resource names should be unique (this is not enforced).
-        If the names are not unique, only the last one with the same name will be updated.
+        For this to work, the resource names should be unique
+        (this is not enforced).
+        If the names are not unique, only the last one with the
+        same name will be updated.
 
         http://docs.ckan.org/en/latest/api/index.html#ckan.logic.action.update.resource_update
         """
@@ -168,7 +170,7 @@ class Uploader:
         )
         resource_id = None
         for r in res.get('results')[0].get('resources'):
-            self.logger.info(str(r.get('name'))+' : '+str(r.get('id')))
+            self.logger.info(str(r.get('name')) + ' : ' + str(r.get('id')))
             if str(r.get('name')) == str(name):
                 resource_id = r.get('id')
 
@@ -204,7 +206,7 @@ class Uploader:
         """
         self.logger.info(
             'Adding resource to dataset --> {} :: {}'.format(
-                package_id,filepath
+                package_id, filepath
             )
         )
         name = name or os.path.basename(filepath)
@@ -239,7 +241,7 @@ class Uploader:
                 owner_org=owner_org
             )
         except ckanapi.ValidationError as ex:
-            if ex.error_dict.get('name') ==  ['That URL is already in use.']:
+            if ex.error_dict.get('name') == ['That URL is already in use.']:
                 self.logger.error('Package already exists')
             else:
                 raise
@@ -306,6 +308,7 @@ def shapefile_to_geojson(infile, tempdir=None):
             f.write(json.dumps(outfile_layer))
         with open("{}.crs".format(outfilepath), "w") as f:
             f.write(crs)
+
 
 if __name__ == '__main__':
     # uploader = Uploader()
